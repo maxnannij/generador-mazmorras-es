@@ -205,26 +205,106 @@ function exportarPDF() {
 
   $("status").textContent = "Generando PDF...";
 
-  const element = $("printable-area");
+  const source = $("printable-area");
+  if (!source) {
+    $("status").textContent = "No hay contenido para exportar.";
+    return;
+  }
+
+  // Clonar el contenido y forzar estilo claro (html2canvas falla con temas oscuros)
+  const clone = source.cloneNode(true);
+  clone.id = "pdf-export-temp";
+  clone.style.cssText = `
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 800px;
+    background: #ffffff !important;
+    color: #111111 !important;
+    padding: 20px;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  `;
+
+  // Forzar estilos claros en todos los hijos
+  const forceLight = (el) => {
+    el.style.background = "#ffffff";
+    el.style.backgroundColor = "#ffffff";
+    el.style.color = "#111111";
+    el.style.borderColor = "#cccccc";
+    if (el.classList) {
+      if (el.classList.contains("map-section") ||
+          el.classList.contains("section-block") ||
+          el.classList.contains("room-block") ||
+          el.classList.contains("general-info") ||
+          el.tagName === "DIV") {
+        el.style.background = "#ffffff";
+        el.style.color = "#111111";
+      }
+    }
+    if (el.tagName === "H2" || el.tagName === "H3") {
+      el.style.color = "#8a6d00";
+    }
+    if (el.tagName === "STRONG") {
+      el.style.color = "#333333";
+    }
+    Array.from(el.children).forEach(forceLight);
+  };
+  forceLight(clone);
+
+  // Reemplazar el canvas del clon por una imagen
+  const originalCanvas = $("map-canvas");
+  const cloneCanvas = clone.querySelector("#map-canvas");
+  if (originalCanvas && cloneCanvas) {
+    const img = document.createElement("img");
+    img.src = originalCanvas.toDataURL("image/png");
+    img.style.cssText = "max-width:100%;height:auto;display:block;margin:0 auto;border:1px solid #999;";
+    cloneCanvas.parentNode.replaceChild(img, cloneCanvas);
+  }
+
+  // Ajustar pre.stats
+  clone.querySelectorAll("pre.stats").forEach(pre => {
+    pre.style.background = "#f5f5f5";
+    pre.style.color = "#222";
+    pre.style.border = "1px solid #ddd";
+    pre.style.padding = "8px";
+  });
+
+  document.body.appendChild(clone);
 
   if (typeof html2pdf !== "undefined") {
     const opt = {
-      margin: 10,
+      margin: [10, 10, 10, 10],
       filename: `${currentName.replace(/[^a-z0-9]/gi, "_")}_nivel${currentLevel}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        windowWidth: 800
+      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] }
     };
-    html2pdf().set(opt).from(element).save().then(() => {
-      $("status").textContent = "PDF exportado correctamente.";
-    }).catch(err => {
-      console.error(err);
-      $("status").textContent = "Error al exportar PDF. Usa Imprimir del navegador.";
-      window.print();
-    });
+
+    html2pdf()
+      .set(opt)
+      .from(clone)
+      .save()
+      .then(() => {
+        document.body.removeChild(clone);
+        $("status").textContent = "PDF exportado correctamente.";
+      })
+      .catch(err => {
+        console.error(err);
+        if (clone.parentNode) document.body.removeChild(clone);
+        $("status").textContent = "Error al exportar. Abriendo diálogo de impresión...";
+        window.print();
+      });
   } else {
+    if (clone.parentNode) document.body.removeChild(clone);
     window.print();
-    $("status").textContent = "Usa el diálogo de impresión del navegador para guardar como PDF.";
+    $("status").textContent = "Usa el diálogo de impresión del navegador → Guardar como PDF.";
   }
 }
 
