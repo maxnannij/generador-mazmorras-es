@@ -84,7 +84,7 @@ header .credits {
 .form-group label {
   display: block;
   font-size: 0.85rem;
-  color: var(--muted intra);
+  color: var(--muted);
   margin-bottom: 0.25rem;
 }
 
@@ -214,7 +214,7 @@ button.full {
 }
 
 .feature-item:last-child {
-  border-bottom: none;
+n  border-bottom: none;
 }
 
 .feature-item strong {
@@ -263,30 +263,52 @@ button.full {
   margin: 0.4rem 0 0;
 }
 
+/* Print / PDF */
 @media print {
   body {
-    background: white;
-    color: black;
+    background: white !important;
+    color: black !important;
   }
-  header, .controls, #status, button {
+  header, .controls, #status, button, .footer {
     display: none !important;
   }
   .container {
-    display: block;
-    max-width: 100%;
-    padding: 0;
+    display: block !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    grid-template-columns: 1fr !important;
   }
   #output {
     display: block !important;
   }
-  .map-section, .section-block, .room-block {
-    background: white;
-    border: 1px solid #ccc;
+  .map-section, .section-block, .room-block, .general-info div {
+    background: white !important;
+    color: black !important;
+    border: 1px solid #ccc !important;
     break-inside: avoid;
   }
-  #map-canvas {
-    max-width: 100%;
+  .map-section h2, .section-block h2, .room-block h3 {
+    color: #8a6d00 !important;
   }
+  .feature-item strong, .general-info strong {
+    color: #333 !important;
+  }
+  #map-canvas {
+    max-width: 100% !important;
+    border: 1px solid #999 !important;
+  }
+  pre.stats {
+    background: #f5f5f5 !important;
+    color: #222 !important;
+    border: 1px solid #ddd !important;
+  }
+  .legend {
+    color: #333 !important;
+  }
+}
+
+#printable-area {
+  /* Contenedor usado por html2pdf */
 }
 
 .legend {
