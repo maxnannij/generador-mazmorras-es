@@ -316,6 +316,12 @@ class DungeonGenerator {
   }
 
   _finalizeDoors() {
+    const original = {};
+    for (let id = 1; id <= this.nRooms; id++) {
+      const room = this.rooms[id];
+      original[id] = room && room.doors ? room.doors.slice() : [];
+    }
+
     for (let r = 0; r <= this.nRows; r++) {
       for (let c = 0; c <= this.nCols; c++) {
         this.cell[r][c] &= ~(DOOR | LOCKED | TRAPPED | SECRET | BARS);
@@ -325,94 +331,110 @@ class DungeonGenerator {
       if (this.rooms[id]) this.rooms[id].doors = [];
     }
 
-    const dirs = [
-      { name: "north", dr: -1, dc: 0 },
-      { name: "south", dr: 1, dc: 0 },
-      { name: "west", dr: 0, dc: -1 },
-      { name: "east", dr: 0, dc: 1 }
-    ];
+    const D = { north: [-1, 0], south: [1, 0], west: [0, -1], east: [0, 1] };
+    const opposite = { north: "south", south: "north", west: "east", east: "west" };
+
+    const isOpen = (r, c) => {
+      if (r < 0 || r > this.nRows || c < 0 || c > this.nCols) return false;
+      return !!(this.cell[r][c] & OPENSPACE);
+    };
+
+    const validOpening = (r, c, dir, roomId) => {
+      if (r < 0 || r > this.nRows || c < 0 || c > this.nCols) return false;
+      const val = this.cell[r][c];
+      if (val & BLOCKED) return false;
+      if (val & ROOM) return false;
+
+      const [idr, idc] = D[opposite[dir]];
+      const ir = r + idr, ic = c + idc;
+      if (!isOpen(ir, ic) || !(this.cell[ir][ic] & ROOM)) return false;
+      const rid = (this.cell[ir][ic] & 0xFFC0) >> 6;
+      if (rid !== roomId) return false;
+
+      if (!(val & (CORRIDOR | ENTRANCE))) return false;
+
+      const [odr, odc] = D[dir];
+      const or_ = r + odr, oc = c + odc;
+      const outOpen = isOpen(or_, oc);
+      if (!outOpen && !(val & CORRIDOR)) return false;
+
+      return true;
+    };
+
+    const assignType = () => {
+      const roll = this.rand();
+      if (roll < 0.12) return { tipo: "secreta", flags: DOOR | SECRET, estado: "secreta" };
+      if (roll < 0.24) return { tipo: "barrotes", flags: DOOR | BARS, estado: "barrotes" };
+      if (roll < 0.38) return { tipo: "hierro", flags: DOOR | LOCKED, estado: this.rand() < 0.5 ? "cerradaConLlave" : "atrancada" };
+      if (roll < 0.52) return { tipo: "fuerte", flags: DOOR, estado: this.rand() < 0.5 ? "cerrada" : "atrancada" };
+      if (roll < 0.62) return { tipo: "piedra", flags: DOOR, estado: "atrancada" };
+      if (roll < 0.72) return { tipo: "porton", flags: DOOR, estado: "normal" };
+      if (roll < 0.82) return { tipo: "buena", flags: DOOR, estado: this.rand() < 0.4 ? "cerrada" : "normal" };
+      return { tipo: "simple", flags: DOOR, estado: this.rand() < 0.4 ? "cerrada" : "normal" };
+    };
+
+    const usedCells = new Set();
 
     for (let id = 1; id <= this.nRooms; id++) {
       const room = this.rooms[id];
       if (!room) continue;
 
       const candidates = [];
-      const perimeter = [];
-      for (let c = room.west; c <= room.east; c++) {
-        perimeter.push({ r: room.north - 1, c, dir: "north" });
-        perimeter.push({ r: room.south + 1, c, dir: "south" });
-      }
-      for (let r = room.north; r <= room.south; r++) {
-        perimeter.push({ r, c: room.west - 1, dir: "west" });
-        perimeter.push({ r, c: room.east + 1, dir: "east" });
-      }
-
-      for (const p of perimeter) {
-        if (p.r < 0 || p.r > this.nRows || p.c < 0 || p.c > this.nCols) continue;
-        const val = this.cell[p.r][p.c];
-        if (val & BLOCKED) continue;
-        if (val & ROOM) continue;
-
-        const isCorridor = !!(val & CORRIDOR) || !!(val & ENTRANCE);
-        if (!isCorridor) continue;
-
-        const inwardName = p.dir === "north" ? "south" : p.dir === "south" ? "north" : p.dir === "west" ? "east" : "west";
-        const inward = dirs.find(d => d.name === inwardName);
-        const ir = p.r + inward.dr, ic = p.c + inward.dc;
-        if (ir < 0 || ir > this.nRows || ic < 0 || ic > this.nCols) continue;
-        if (!(this.cell[ir][ic] & ROOM)) continue;
-        const roomIdHere = (this.cell[ir][ic] & 0xFFC0) >> 6;
-        if (roomIdHere !== id) continue;
-
-        const out = dirs.find(d => d.name === p.dir);
-        const or_ = p.r + out.dr, oc = p.c + out.dc;
-        let connectsOut = !!(val & CORRIDOR);
-        if (or_ >= 0 && or_ <= this.nRows && oc >= 0 && oc <= this.nCols) {
-          if (this.cell[or_][oc] & OPENSPACE) connectsOut = true;
+      for (const d of original[id]) {
+        if (validOpening(d.r, d.c, d.dir, id)) {
+          candidates.push({ r: d.r, c: d.c, dir: d.dir });
         }
-        if (!connectsOut && !(val & CORRIDOR) && !(val & ENTRANCE)) continue;
-
-        candidates.push(p);
       }
 
-      const seen = new Set();
-      const unique = [];
+      if (candidates.length === 0) {
+        const sides = [
+          { dir: "north", cells: [] },
+          { dir: "south", cells: [] },
+          { dir: "west", cells: [] },
+          { dir: "east", cells: [] }
+        ];
+        for (let c = room.west; c <= room.east; c++) {
+          sides[0].cells.push({ r: room.north - 1, c });
+          sides[1].cells.push({ r: room.south + 1, c });
+        }
+        for (let r = room.north; r <= room.south; r++) {
+          sides[2].cells.push({ r, c: room.west - 1 });
+          sides[3].cells.push({ r, c: room.east + 1 });
+        }
+        for (const side of sides) {
+          const mid = Math.floor(side.cells.length / 2);
+          const order = [side.cells[mid], ...side.cells.filter((_, i) => i !== mid)];
+          for (const cell of order) {
+            if (validOpening(cell.r, cell.c, side.dir, id)) {
+              candidates.push({ r: cell.r, c: cell.c, dir: side.dir });
+              break;
+            }
+          }
+        }
+      }
+
+      let placed = 0;
       for (const cand of candidates) {
+        if (placed >= 4) break;
         const key = cand.r + "," + cand.c;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        unique.push(cand);
-      }
-
-      for (const cand of unique) {
-        const roll = this.rand();
-        let tipo = "simple";
-        let flags = DOOR;
-        if (roll < 0.12) { tipo = "secreta"; flags |= SECRET; }
-        else if (roll < 0.24) { tipo = "barrotes"; flags |= BARS; }
-        else if (roll < 0.40) { tipo = "hierro"; flags |= LOCKED; }
-        else if (roll < 0.55) { tipo = "fuerte"; }
-        else if (roll < 0.65) { tipo = "piedra"; }
-        else if (roll < 0.75) { tipo = "porton"; }
-        else if (roll < 0.85) { tipo = "buena"; }
-        else { tipo = "simple"; }
-
-        let estado = "normal";
-        if (tipo === "secreta") estado = "secreta";
-        else if (tipo === "barrotes") estado = "barrotes";
-        else if (flags & LOCKED) estado = this.rand() < 0.5 ? "cerradaConLlave" : "atrancada";
-        else {
-          const er = this.rand();
-          if (er < 0.35) estado = "cerrada";
-          else if (er < 0.55) estado = "atrancada";
-          else if (er < 0.70) estado = "cerradaConLlave";
-          else estado = "normal";
+        if (usedCells.has(key)) continue;
+        let tooClose = false;
+        for (const prev of room.doors) {
+          if (prev.dir === cand.dir && Math.abs(prev.r - cand.r) + Math.abs(prev.c - cand.c) < 2) {
+            tooClose = true;
+            break;
+          }
         }
+        if (tooClose) continue;
 
-        this.cell[cand.r][cand.c] |= flags;
-        this.cell[cand.r][cand.c] |= CORRIDOR;
-
-        room.doors.push({ r: cand.r, c: cand.c, dir: cand.dir, tipo, estado });
+        const t = assignType();
+        this.cell[cand.r][cand.c] |= t.flags | CORRIDOR;
+        usedCells.add(key);
+        room.doors.push({
+          r: cand.r, c: cand.c, dir: cand.dir,
+          tipo: t.tipo, estado: t.estado
+        });
+        placed++;
       }
     }
   }
