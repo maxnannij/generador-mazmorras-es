@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Mazmorras en Español</title>
+  <meta name="description" content="Generador procedural de mazmorras aleatorias en español. Mapas, habitaciones, monstruos, trampas y exportación a PDF. Inspirado en donjon.bin.sh">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- html2pdf para exportación -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Generador de Mazmorras</h1>
+    <div class="credits">
+      Inspirado en <a href="https://donjon.bin.sh/fantasy/dungeon/" target="_blank" rel="noopener" style="color:#c9a227">donjon.bin.sh</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Controles -->
+    <aside class="controls">
+      <h2>Configuración</h2>
+
+      <div class="form-group">
+        <label for="dungeon-name">Nombre de la mazmorra</label>
+        <input type="text" id="dungeon-name" placeholder="Nombre...">
+        <div class="btn-row">
+          <button type="button" class="secondary" id="btn-random-name" style="flex:1">Aleatorio</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="dungeon-level">Nivel de la mazmorra</label>
+        <select id="dungeon-level">
+          <option value="1" selected>1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="seed">Semilla (seed)</label>
+        <input type="number" id="seed" placeholder="Dejar vacío para aleatorio">
+        <div class="btn-row">
+          <button type="button" class="secondary" id="btn-random-seed" style="flex:1">Nueva semilla</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="dungeon-size">Tamaño</label>
+        <select id="dungeon-size">
+          <option value="Fine">Minúsculo (Fine)</option>
+          <option value="Diminutive">Diminuto</option>
+          <option value="Tiny">Muy pequeño</option>
+          <option value="Small">Pequeño</option>
+          <option value="Medium" selected>Mediano</option>
+          <option value="Large">Grande</option>
+          <option value="Huge">Enorme</option>
+          <option value="Gargantuan">Gigantesco</option>
+          <option value="Colossal">Colosal</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="dungeon-layout">Forma de la mazmorra</label>
+        <select id="dungeon-layout">
+          <option value="None" selected>Rectangular</option>
+          <option value="Box">Caja</option>
+          <option value="Round">Redonda</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="room-layout">Distribución de habitaciones</label>
+        <select id="room-layout">
+          <option value="Scattered" selected>Dispersas</option>
+          <option value="Dense">Densas</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="room-size">Tamaño de habitaciones</label>
+        <select id="room-size">
+          <option value="Medium" selected>Mediano</option>
+          <option value="Large">Grande</option>
+          <option value="Huge">Enorme</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="corridor-layout">Estilo de pasillos</label>
+        <select id="corridor-layout">
+          <option value="Bent" selected>Sinusoide / Errante</option>
+          <option value="Straight">Rectos</option>
+          <option value="Labyrinth">Laberínticos</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="stairs">Escaleras</label>
+        <select id="stairs">
+          <option value="No">No</option>
+          <option value="Yes" selected>Sí</option>
+          <option value="Many">Muchas</option>
+        </select>
+      </div>
+
+      <button type="button" class="full" id="btn-generate">Generar Mazmorra</button>
+      <button type="button" class="full secondary" id="btn-pdf" style="margin-top:0.5rem">Exportar a PDF</button>
+
+      <div id="status"></div>
+    </aside>
+
+    <!-- Resultado -->
+    <main id="output">
+      <div id="printable-area">
+        <div class="map-section">
+          <h2 id="result-title">Nombre de la mazmorra</h2>
+          <p id="result-level" style="color:var(--muted);margin:0 0 1rem"></p>
+          <canvas id="map-canvas"></canvas>
+          <div class="legend">
+            <span><i style="background:#fff"></i> Espacio abierto</span>
+            <span><i style="background:#8B4513"></i> Puerta</span>
+            <span><i style="background:#44ff44"></i> Escaleras arriba</span>
+            <span><i style="background:#4444ff"></i> Escaleras abajo</span>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2>General</h2>
+          <div class="general-info">
+            <div><strong>Tamaño</strong><span id="result-size"></span></div>
+            <div><strong>Paredes</strong><span id="result-walls"></span></div>
+            <div><strong>Suelo</strong><span id="result-floor"></span></div>
+            <div><strong>Temperatura</strong><span id="result-temp"></span></div>
+            <div><strong>Iluminación</strong><span id="result-light"></span></div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2>Características de los pasillos</h2>
+          <div id="corridor-features"></div>
+        </div>
+
+        <div class="section-block">
+          <h2>Monstruos errantes</h2>
+          <div id="wandering-monsters"></div>
+        </div>
+
+        <div class="section-block">
+          <h2>Habitaciones</h2>
+          <div id="rooms-container"></div>
+        </div>
+
+        <div class="footer" style="border:none;padding-top:0.5rem">
+          Generado con Generador de Mazmorras en Español · 
+          Basado en el algoritmo de <a href="https://donjon.bin.sh/" target="_blank" rel="noopener">donjon.bin.sh</a> (drow) · 
+          Contenido bajo términos OGL donde corresponda
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <p>
+      Código y UI en español · Algoritmo de layout original por drow (CC BY-NC 3.0) · 
+      <a href="https://github.com/maxnannij/generador-mazmorras-es" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </footer>
+
+  <script src="js/content.js"></script>
+  <script src="js/dungeon.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
