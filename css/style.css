@@ -214,7 +214,7 @@ button.full {
 }
 
 .feature-item:last-child {
-n  border-bottom: none;
+  border-bottom: none;
 }
 
 .feature-item strong {
