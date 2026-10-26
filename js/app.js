@@ -76,11 +76,15 @@ function generarContenidoHabitacion(room, nivel) {
   if (Math.random() < 0.15) content.trucos.push(Contenido.generarTruco());
   if (Math.random() < 0.3) content.tesoro = Contenido.generarTesoro(nivel);
 
+  // Puertas reales del layout (solo conexiones válidas)
   room.doors.forEach(d => {
-    const tipos = ["simple", "fuerte", "buena", "piedra", "hierro", "porton"];
-    const estados = ["cerrada", "atrancada", "cerradaConLlave", "normal"];
-    content.puertas.push({ dir: d.dir, tipo: Contenido.elegir(tipos), estado: Contenido.elegir(estados) });
+    content.puertas.push({
+      dir: d.dir,
+      tipo: d.tipo || "simple",
+      estado: d.estado || "normal"
+    });
   });
+
   return content;
 }
 
