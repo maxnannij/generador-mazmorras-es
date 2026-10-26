@@ -4,63 +4,39 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generador de Mazmorras en Español</title>
-  <meta name="description" content="Generador procedural de mazmorras aleatorias en español. Mapas, habitaciones, monstruos, trampas y exportación a PDF. Inspirado en donjon.bin.sh">
   <link rel="stylesheet" href="css/style.css">
-  <!-- html2pdf para exportación -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
 </head>
 <body>
   <header>
     <h1>Generador de Mazmorras</h1>
-    <div class="credits">
-      Inspirado en <a href="https://donjon.bin.sh/fantasy/dungeon/" target="_blank" rel="noopener" style="color:#c9a227">donjon.bin.sh</a>
-    </div>
+    <div class="credits">Inspirado en donjon.bin.sh · Contenido en español</div>
   </header>
 
   <div class="container">
-    <!-- Controles -->
     <aside class="controls">
       <h2>Configuración</h2>
 
       <div class="form-group">
-        <label for="dungeon-name">Nombre de la mazmorra</label>
-        <input type="text" id="dungeon-name" placeholder="Nombre...">
+        <label for="dungeon-name">Nombre</label>
         <div class="btn-row">
-          <button type="button" class="secondary" id="btn-random-name" style="flex:1">Aleatorio</button>
+          <input type="text" id="dungeon-name" placeholder="Nombre de la mazmorra">
+          <button type="button" class="secondary" id="btn-random-name" title="Aleatorio">↻</button>
         </div>
       </div>
 
       <div class="form-group">
-        <label for="dungeon-level">Nivel de la mazmorra</label>
-        <select id="dungeon-level">
-          <option value="1" selected>1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-          <option value="9">9</option>
-          <option value="10">10</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="seed">Semilla (seed)</label>
-        <input type="number" id="seed" placeholder="Dejar vacío para aleatorio">
-        <div class="btn-row">
-          <button type="button" class="secondary" id="btn-random-seed" style="flex:1">Nueva semilla</button>
-        </div>
+        <label for="dungeon-level">Nivel</label>
+        <input type="number" id="dungeon-level" value="1" min="1" max="20">
       </div>
 
       <div class="form-group">
         <label for="dungeon-size">Tamaño</label>
         <select id="dungeon-size">
-          <option value="Fine">Minúsculo (Fine)</option>
+          <option value="Fine">Mínimo</option>
           <option value="Diminutive">Diminuto</option>
-          <option value="Tiny">Muy pequeño</option>
-          <option value="Small">Pequeño</option>
+          <option value="Tiny">Pequeño</option>
+          <option value="Small">Chico</option>
           <option value="Medium" selected>Mediano</option>
           <option value="Large">Grande</option>
           <option value="Huge">Enorme</option>
@@ -70,9 +46,9 @@
       </div>
 
       <div class="form-group">
-        <label for="dungeon-layout">Forma de la mazmorra</label>
+        <label for="dungeon-layout">Forma</label>
         <select id="dungeon-layout">
-          <option value="None" selected>Rectangular</option>
+          <option value="None" selected>Ninguna</option>
           <option value="Box">Caja</option>
           <option value="Round">Redonda</option>
         </select>
@@ -98,28 +74,34 @@
       <div class="form-group">
         <label for="corridor-layout">Estilo de pasillos</label>
         <select id="corridor-layout">
-          <option value="Bent" selected>Sinusoide / Errante</option>
-          <option value="Straight">Rectos</option>
           <option value="Labyrinth">Laberínticos</option>
+          <option value="Bent" selected>Con giros</option>
+          <option value="Straight">Rectos</option>
         </select>
       </div>
 
       <div class="form-group">
         <label for="stairs">Escaleras</label>
         <select id="stairs">
-          <option value="No">No</option>
           <option value="Yes" selected>Sí</option>
           <option value="Many">Muchas</option>
+          <option value="No">No</option>
         </select>
       </div>
 
-      <button type="button" class="full" id="btn-generate">Generar Mazmorra</button>
-      <button type="button" class="full secondary" id="btn-pdf" style="margin-top:0.5rem">Exportar a PDF</button>
+      <div class="form-group">
+        <label for="seed">Semilla</label>
+        <div class="btn-row">
+          <input type="number" id="seed" placeholder="Aleatoria">
+          <button type="button" class="secondary" id="btn-random-seed" title="Aleatorio">↻</button>
+        </div>
+      </div>
 
+      <button type="button" class="full" id="btn-generate">Generar mazmorra</button>
+      <button type="button" class="full secondary" id="btn-pdf">Exportar a PDF</button>
       <div id="status"></div>
     </aside>
 
-    <!-- Resultado -->
     <main id="output">
       <div id="printable-area">
         <div class="map-section">
@@ -129,6 +111,8 @@
           <div class="legend">
             <span><i style="background:#fff"></i> Espacio abierto</span>
             <span><i style="background:#8B4513"></i> Puerta</span>
+            <span><i style="background:#555"></i> Secreta</span>
+            <span><i style="background:repeating-linear-gradient(90deg,#fff 0 2px,#666 2px 3px)"></i> Barrotes</span>
             <span><i style="background:#44ff44"></i> Escaleras arriba</span>
             <span><i style="background:#4444ff"></i> Escaleras abajo</span>
           </div>
@@ -146,7 +130,7 @@
         </div>
 
         <div class="section-block">
-          <h2>Características de los pasillos</h2>
+          <h2>Características de pasillos</h2>
           <div id="corridor-features"></div>
         </div>
 
@@ -159,21 +143,13 @@
           <h2>Habitaciones</h2>
           <div id="rooms-container"></div>
         </div>
-
-        <div class="footer" style="border:none;padding-top:0.5rem">
-          Generado con Generador de Mazmorras en Español · 
-          Basado en el algoritmo de <a href="https://donjon.bin.sh/" target="_blank" rel="noopener">donjon.bin.sh</a> (drow) · 
-          Contenido bajo términos OGL donde corresponda
-        </div>
       </div>
     </main>
   </div>
 
   <footer class="footer">
-    <p>
-      Código y UI en español · Algoritmo de layout original por drow (CC BY-NC 3.0) · 
-      <a href="https://github.com/maxnannij/generador-mazmorras-es" target="_blank" rel="noopener">GitHub</a>
-    </p>
+    Generador de mazmorras en español · Inspirado en
+    <a href="https://donjon.bin.sh/" target="_blank" rel="noopener">donjon.bin.sh</a>
   </footer>
 
   <script src="js/content.js"></script>
