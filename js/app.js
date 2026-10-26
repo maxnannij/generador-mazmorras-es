@@ -31,9 +31,11 @@ function generarMazmorra() {
     roomLayout: $("room-layout").value === "Dense" ? "Dense" : "Scattered",
     corridorLayout: $("corridor-layout").value,
     roomMin: 3,
-    roomMax: $("room-size").value === "Large" ? 11 : ($("room-size").value === "Huge" ? 13 : 9),
+    roomMax: $("room-size").value === "Large" ? 9 : ($("room-size").value === "Huge" ? 11 : 7),
     addStairs: $("stairs").value === "Yes" ? 2 : ($("stairs").value === "Many" ? 4 : 0),
-    cellSize: 10
+    cellSize: 10,
+    maxDepth: n <= 25 ? 3 : n <= 40 ? 4 : n <= 55 ? 5 : 6,
+    minLeafSize: n <= 25 ? 6 : 8
   };
 
   $("status").textContent = "Generando mazmorra...";
@@ -76,7 +78,6 @@ function generarContenidoHabitacion(room, nivel) {
   if (Math.random() < 0.15) content.trucos.push(Contenido.generarTruco());
   if (Math.random() < 0.3) content.tesoro = Contenido.generarTesoro(nivel);
 
-  // Puertas reales del layout (solo conexiones válidas)
   room.doors.forEach(d => {
     content.puertas.push({
       dir: d.dir,
